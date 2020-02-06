@@ -50,6 +50,18 @@ impl DeepMerge for JsonValue {
                         }
 
                         // Otherwise, as long as the second value is present, it will always win
+                        Some(Array(with_values)) => {
+                            if let (Some(Array(mut self_values)), ArrayMergeBehavior::Concat) =
+                                (self_obj.remove(key), array_merge)
+                            {
+                                self_values.extend(with_values.iter().cloned());
+                                self_obj.insert(key, Array(self_values));
+                            } else {
+                                self_obj.insert(key, Array(with_values.clone()));
+                            }
+                        }
+
+                        // Otherwise, as long as the second value is present, it will always win
                         Some(with_value) => {
                             self_obj.insert(key, with_value.clone());
                         }
@@ -73,28 +85,72 @@ mod tests {
     use json;
     use test_case::test_case;
 
-    #[test_case(r#"{"a":1}"#, r#"{"a":2}"#, r#"{"a":2}"#)]
-    #[test_case(r#"{"z":[1]}"#, r#"{"z":2}"#, r#"{"z":2}"#)]
-    #[test_case(r#"{"y":[1]}"#, r#"{"y":[2]}"#, r#"{"y":[2]}"#)]
-    #[test_case(r#"{"a":1}"#, r#"{"b":2}"#, r#"{"a":1,"b":2}"#)]
-    #[test_case(r#"{"a":1, "b":{"b1": 3}}"#, r#"{"b":2}"#, r#"{"a":1,"b":2}"#)]
+    #[test_case(r#"{"a":1}"#, r#"{"a":2}"#, r#"{"a":2}"#, ArrayMergeBehavior::Replace)]
+    #[test_case(
+        r#"{"z":[1]}"#,
+        r#"{"z":2}"#,
+        r#"{"z":2}"#,
+        ArrayMergeBehavior::Replace
+    )]
+    #[test_case(
+        r#"{"y":[1]}"#,
+        r#"{"y":[2]}"#,
+        r#"{"y":[2]}"#,
+        ArrayMergeBehavior::Replace
+    )]
+    #[test_case(
+        r#"{"a":1}"#,
+        r#"{"b":2}"#,
+        r#"{"a":1,"b":2}"#,
+        ArrayMergeBehavior::Replace
+    )]
+    #[test_case(
+        r#"{"a":1, "b":{"b1": 3}}"#,
+        r#"{"b":2}"#,
+        r#"{"a":1,"b":2}"#,
+        ArrayMergeBehavior::Replace
+    )]
     #[test_case(
         r#"{"a":1, "b":{"b1": 3}}"#,
         r#"{"b":{"b1": 4}}"#,
-        r#"{"a":1,"b":{"b1": 4}}"#
+        r#"{"a":1,"b":{"b1": 4}}"#,
+        ArrayMergeBehavior::Replace
     )]
     #[test_case(
-        r#"{"a":1, "b":{"b1": 3}}"#,
-        r#"{"b":{"b2": 5}}"#,
-        r#"{"a":1,"b":{"b1": 3, "b2": 5}}"#
+        r#"{"a": 1, "b": {"b1": 3}}"#,
+        r#"{        "b": {"b2": 5}}"#,
+        r#"{"a": 1, "b": {"b1": 3, "b2": 5}}"#,
+        ArrayMergeBehavior::Replace
     )]
-    fn test_json_merge(current: &str, next: &str, expected: &str) {
+    #[test_case(
+        r#"{"a": 1, "b": {"b1": 3,          "b3": {"c1": 6          }}}"#,
+        r#"{        "b": {         "b2": 5, "b3": {         "c2": 7 }}}"#,
+        r#"{"a": 1, "b": {"b1": 3, "b2": 5, "b3": {"c1": 6, "c2": 7 }}}"#,
+        ArrayMergeBehavior::Replace
+    )]
+    #[test_case(
+        r#"{"z":[1]}"#,
+        r#"{"z":[2]}"#,
+        r#"{"z":[2]}"#,
+        ArrayMergeBehavior::Replace;
+        "meh"
+    )]
+    #[test_case(
+        r#"{"z":[1]}"#,
+        r#"{"z":[2]}"#,
+        r#"{"z":[1, 2]}"#,
+        ArrayMergeBehavior::Concat
+    )]
+    #[test_case(
+        r#"{"z":[2]}"#,
+        r#"{"z":[1]}"#,
+        r#"{"z":[2, 1]}"#,
+        ArrayMergeBehavior::Concat
+    )]
+    fn test_json_merge(current: &str, next: &str, expected: &str, array_merge: ArrayMergeBehavior) {
         assert_eq!(
             JsonValue(json::parse(current).unwrap())
-                .deep_merge(
-                    JsonValue(json::parse(next).unwrap()),
-                    ArrayMergeBehavior::Replace
-                )
+                .deep_merge(JsonValue(json::parse(next).unwrap()), array_merge)
                 .0,
             json::parse(expected).unwrap()
         );
