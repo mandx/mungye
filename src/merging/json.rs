@@ -1,25 +1,9 @@
-#[derive(Debug, Copy, Clone)]
-pub(crate) enum ArrayMergeBehavior {
-    Replace,
-    Concat,
-    // TODO: Add `Extend`: Like concat, but will remove duplicates.
-    // Extend,
-    // TODO: Add `Zip`: Merge together elements in the same indices.
-    //       For arrays of unequal lengths, simply use the value
-    //       that's already there.
-    // Zip,
-}
-
-// TODO: Find better names for `current` and `next` variables/symbols.
-
-pub(crate) trait DeepMerge {
-    fn deep_merge(self, with: Self, array_merge: ArrayMergeBehavior) -> Self;
-}
+use crate::merging::{ArrayMergeBehavior, DeepMerge};
 
 pub(crate) use crate::conversions::JsonValue;
 
 impl DeepMerge for JsonValue {
-    fn deep_merge(self, with: Self, array_merge: ArrayMergeBehavior) -> JsonValue {
+    fn deep_merge(self, with: Self, array_merge: ArrayMergeBehavior) -> Self {
         use json::JsonValue::*;
         JsonValue(match (self.0, with.0) {
             (Array(mut self_values), Array(with_values)) => match array_merge {
@@ -30,48 +14,20 @@ impl DeepMerge for JsonValue {
                 }
             },
             (Object(mut self_obj), Object(with_obj)) => {
-                for key in with_obj.iter().map(|(k, _)| k) {
-                    match with_obj.get(key) {
-                        // If we found two objects, merge them together.
-                        Some(Object(with_value)) => {
-                            if let Some(Object(self_value)) = self_obj.remove(key) {
-                                self_obj.insert(
-                                    key,
-                                    JsonValue(Object(self_value.clone()))
-                                        .deep_merge(
-                                            JsonValue(Object(with_value.clone())),
-                                            array_merge,
-                                        )
-                                        .0,
-                                );
-                            } else {
-                                self_obj.insert(key, Object(with_value.clone()));
+                for (key, with_value) in with_obj.iter().map(|(k, v)| (k, v.clone())) {
+                    let original_value = self_obj.remove(key);
+                    self_obj.insert(
+                        key,
+                        match original_value {
+                            Some(self_value) => {
+                                JsonValue(self_value)
+                                    .deep_merge(JsonValue(with_value), array_merge)
+                                    .0
                             }
-                        }
-
-                        // Otherwise, as long as the second value is present, it will always win
-                        Some(Array(with_values)) => {
-                            if let (Some(Array(mut self_values)), ArrayMergeBehavior::Concat) =
-                                (self_obj.remove(key), array_merge)
-                            {
-                                self_values.extend(with_values.iter().cloned());
-                                self_obj.insert(key, Array(self_values));
-                            } else {
-                                self_obj.insert(key, Array(with_values.clone()));
-                            }
-                        }
-
-                        // Otherwise, as long as the second value is present, it will always win
-                        Some(with_value) => {
-                            self_obj.insert(key, with_value.clone());
-                        }
-
-                        // Since we are iterating over the keys of the second
-                        // object we should never get to this point
-                        None => unreachable!(),
-                    }
+                            None => with_value,
+                        },
+                    )
                 }
-
                 Object(self_obj)
             }
             (_, with) => with,
@@ -82,7 +38,6 @@ impl DeepMerge for JsonValue {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use json;
     use test_case::test_case;
 
     #[test_case(r#"{"a":1}"#, r#"{"a":2}"#, r#"{"a":2}"#, ArrayMergeBehavior::Replace)]
@@ -145,6 +100,12 @@ mod tests {
         r#"{"z":[2]}"#,
         r#"{"z":[1]}"#,
         r#"{"z":[2, 1]}"#,
+        ArrayMergeBehavior::Concat
+    )]
+    #[test_case(
+        r#"{"z": {"z1": [2]}}"#,
+        r#"{"z": {"z1": [1]}}"#,
+        r#"{"z": {"z1": [2, 1]}}"#,
         ArrayMergeBehavior::Concat
     )]
     fn test_json_merge(current: &str, next: &str, expected: &str, array_merge: ArrayMergeBehavior) {
