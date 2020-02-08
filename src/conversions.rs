@@ -1,23 +1,35 @@
 // use toml;
-use json;
-use yaml_rust as yaml;
+use json as jsonlib;
+use yaml_rust as yamllib;
 
 // pub(crate) struct TomlValue(toml::Value);
-pub(crate) struct YamlValue(pub yaml::Yaml);
-pub(crate) struct JsonValue(pub json::JsonValue);
+pub(crate) struct YamlValue(pub yamllib::Yaml);
+pub(crate) struct JsonValue(pub jsonlib::JsonValue);
 
-pub(crate) struct JsonObject(json::object::Object);
-pub(crate) struct YamlHash(yaml::yaml::Hash);
+pub(crate) struct JsonObject(jsonlib::object::Object);
+pub(crate) struct YamlHash(yamllib::yaml::Hash);
 
-impl From<yaml::Yaml> for YamlValue {
-    fn from(value: yaml::Yaml) -> Self {
+impl From<yamllib::Yaml> for YamlValue {
+    fn from(value: yamllib::Yaml) -> Self {
         Self(value)
     }
 }
 
-impl From<json::JsonValue> for JsonValue {
-    fn from(value: json::JsonValue) -> Self {
+impl Default for YamlValue {
+    fn default() -> Self {
+        Self(yamllib::Yaml::Null)
+    }
+}
+
+impl From<jsonlib::JsonValue> for JsonValue {
+    fn from(value: jsonlib::JsonValue) -> Self {
         Self(value)
+    }
+}
+
+impl Default for JsonValue {
+    fn default() -> Self {
+        Self(jsonlib::JsonValue::Null)
     }
 }
 
@@ -28,11 +40,11 @@ impl From<JsonObject> for YamlHash {
                 .iter()
                 .map(|(key, value)| {
                     (
-                        yaml::Yaml::String(key.into()),
+                        yamllib::Yaml::String(key.into()),
                         YamlValue::from(JsonValue(value.clone())).0,
                     )
                 })
-                .collect::<yaml::yaml::Hash>(),
+                .collect::<yamllib::yaml::Hash>(),
         )
     }
 }
@@ -40,13 +52,15 @@ impl From<JsonObject> for YamlHash {
 impl From<JsonValue> for YamlValue {
     fn from(JsonValue(value): JsonValue) -> Self {
         YamlValue(match value {
-            json::JsonValue::Null => yaml::Yaml::Null,
-            json::JsonValue::Short(value) => yaml::Yaml::String(value.into()),
-            json::JsonValue::Number(value) => yaml::Yaml::Integer(value.into()),
-            json::JsonValue::String(value) => yaml::Yaml::String(value),
-            json::JsonValue::Boolean(value) => yaml::Yaml::Boolean(value),
-            json::JsonValue::Object(value) => yaml::Yaml::Hash(YamlHash::from(JsonObject(value)).0),
-            json::JsonValue::Array(values) => yaml::Yaml::Array(
+            jsonlib::JsonValue::Null => yamllib::Yaml::Null,
+            jsonlib::JsonValue::Short(value) => yamllib::Yaml::String(value.into()),
+            jsonlib::JsonValue::Number(value) => yamllib::Yaml::Integer(value.into()),
+            jsonlib::JsonValue::String(value) => yamllib::Yaml::String(value),
+            jsonlib::JsonValue::Boolean(value) => yamllib::Yaml::Boolean(value),
+            jsonlib::JsonValue::Object(value) => {
+                yamllib::Yaml::Hash(YamlHash::from(JsonObject(value)).0)
+            }
+            jsonlib::JsonValue::Array(values) => yamllib::Yaml::Array(
                 values
                     .into_iter()
                     .map(|value| YamlValue::from(JsonValue(value)).0)
@@ -58,7 +72,7 @@ impl From<JsonValue> for YamlValue {
 
 impl From<YamlValue> for String {
     fn from(YamlValue(value): YamlValue) -> Self {
-        use yaml::Yaml::*;
+        use yamllib::Yaml::*;
         match value {
             Real(value) => value,
             Integer(value) => value.to_string(),
@@ -84,7 +98,7 @@ impl From<YamlHash> for JsonObject {
                         JsonValue::from(YamlValue(value.clone())).0,
                     )
                 })
-                .collect::<json::object::Object>(),
+                .collect::<jsonlib::object::Object>(),
         )
     }
 }
@@ -92,23 +106,25 @@ impl From<YamlHash> for JsonObject {
 impl From<YamlValue> for JsonValue {
     fn from(YamlValue(value): YamlValue) -> Self {
         JsonValue(match value {
-            yaml::Yaml::Real(value) => {
-                json::JsonValue::Number(value.parse::<f64>().unwrap().into())
+            yamllib::Yaml::Real(value) => {
+                jsonlib::JsonValue::Number(value.parse::<f64>().unwrap().into())
             }
-            yaml::Yaml::Integer(value) => json::JsonValue::Number(value.into()),
-            yaml::Yaml::String(value) => json::JsonValue::String(value),
-            yaml::Yaml::Boolean(value) => json::JsonValue::Boolean(value),
-            yaml::Yaml::Null => json::JsonValue::Null,
-            yaml::Yaml::Hash(hash) => json::JsonValue::Object(JsonObject::from(YamlHash(hash)).0),
-            yaml::Yaml::Array(values) => json::JsonValue::Array(
+            yamllib::Yaml::Integer(value) => jsonlib::JsonValue::Number(value.into()),
+            yamllib::Yaml::String(value) => jsonlib::JsonValue::String(value),
+            yamllib::Yaml::Boolean(value) => jsonlib::JsonValue::Boolean(value),
+            yamllib::Yaml::Null => jsonlib::JsonValue::Null,
+            yamllib::Yaml::Hash(hash) => {
+                jsonlib::JsonValue::Object(JsonObject::from(YamlHash(hash)).0)
+            }
+            yamllib::Yaml::Array(values) => jsonlib::JsonValue::Array(
                 values
                     .into_iter()
                     .map(|value| JsonValue::from(YamlValue(value)).0)
                     .collect(),
             ),
 
-            yaml::Yaml::Alias(_) => panic!("`Yaml::Alias` is not yer supported"),
-            yaml::Yaml::BadValue => panic!("`Yaml::BadValue` can not be converted"),
+            yamllib::Yaml::Alias(_) => panic!("`Yaml::Alias` is not yer supported"),
+            yamllib::Yaml::BadValue => panic!("`Yaml::BadValue` can not be converted"),
         })
     }
 }

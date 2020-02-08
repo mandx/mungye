@@ -1,8 +1,6 @@
 mod json;
 mod yaml;
 
-use std::fmt;
-
 #[derive(Debug, Copy, Clone)]
 pub(crate) enum ArrayMergeBehavior {
     Replace,
@@ -33,16 +31,14 @@ impl std::str::FromStr for ArrayMergeBehavior {
     }
 }
 
-impl fmt::Display for ArrayMergeBehavior {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl std::fmt::Display for ArrayMergeBehavior {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Replace => write!(f, "replace"),
             Self::Concat => write!(f, "concat"),
         }
     }
 }
-
-// TODO: Find better names for `current` and `next` variables/symbols.
 
 pub(crate) trait DeepMerge {
     fn deep_merge(self, with: Self, array_merge: ArrayMergeBehavior) -> Self;
