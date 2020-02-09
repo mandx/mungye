@@ -107,7 +107,12 @@ impl From<YamlValue> for JsonValue {
     fn from(YamlValue(value): YamlValue) -> Self {
         JsonValue(match value {
             yamllib::Yaml::Real(value) => {
-                jsonlib::JsonValue::Number(value.parse::<f64>().unwrap().into())
+                match value.parse::<f64>() {
+                    Ok(parsed) => jsonlib::JsonValue::Number(parsed.into()),
+                    // In the rare case we can't parse the number, we just
+                    // leave the original value as a string.
+                    Err(_) => jsonlib::JsonValue::String(value),
+                }
             }
             yamllib::Yaml::Integer(value) => jsonlib::JsonValue::Number(value.into()),
             yamllib::Yaml::String(value) => jsonlib::JsonValue::String(value),
