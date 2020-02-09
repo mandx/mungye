@@ -3,6 +3,7 @@ mod documents;
 mod merging;
 
 use std::ffi::OsStr;
+use std::io::{self, Write};
 use std::path::PathBuf;
 use std::str::FromStr;
 
@@ -19,11 +20,27 @@ struct CliArgs {
     #[structopt(name = "FILE", parse(from_os_str))]
     files: Vec<PathBuf>,
 
+    /// How to handle arrays merging
     #[structopt(long = "arrays")]
     array_merge: ArrayMergeBehavior,
 
+    /// Force output to be in a specific format, otherwise the format of first file in the arguments is used.
     #[structopt(long = "force-format")]
     force_format: Option<DocumentType>,
+}
+
+fn handle_stdout_error<T>(result: io::Result<T>) {
+    if let Err(original_error) = result {
+        if let Err(stderr_error) = writeln!(
+            io::stderr().lock(),
+            "Error writing to stdout: {}",
+            original_error
+        ) {
+            // If we can't log errors to stderr...
+            // Well not much we can do now...
+            drop(stderr_error);
+        }
+    }
 }
 
 fn main() {
@@ -74,23 +91,23 @@ fn main() {
         destination.deep_merge(document, array_merge)
     });
 
-    println!(
-        "{}",
-        match result {
-            Document::JSON(json) => json
-                .into_iter()
-                .map(|doc| doc.pretty(2))
-                .collect::<String>(),
-            Document::YAML(yaml) => yaml
-                .into_iter()
-                .map(|doc| {
-                    use yaml_rust as yamllib;
-                    let mut out_str = String::new();
-                    let mut emitter = yamllib::YamlEmitter::new(&mut out_str);
-                    emitter.dump(&doc).unwrap();
-                    out_str
-                })
-                .collect(),
-        }
-    );
+    let stdout = io::stdout();
+
+    match result {
+        Document::JSON(json) => json.into_iter().map(|doc| doc.pretty(2)).for_each(|out| {
+            handle_stdout_error(writeln!(stdout.lock(), "{}", &out));
+        }),
+        Document::YAML(yaml) => yaml
+            .into_iter()
+            .map(|doc| {
+                use yaml_rust as yamllib;
+                let mut out_str = String::new();
+                let mut emitter = yamllib::YamlEmitter::new(&mut out_str);
+                emitter.dump(&doc).unwrap();
+                out_str
+            })
+            .for_each(|out| {
+                handle_stdout_error(writeln!(stdout.lock(), "{}", &out));
+            }),
+    }
 }
