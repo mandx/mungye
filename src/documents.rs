@@ -11,7 +11,7 @@ use json as jsonlib;
 // use toml as tomllib;
 use yaml_rust as yamllib;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub(crate) enum DocumentType {
     YAML,
     // TOML,

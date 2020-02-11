@@ -2,15 +2,19 @@ mod conversions;
 mod documents;
 mod merging;
 
-use std::ffi::OsStr;
-use std::io::{self, Write};
-use std::path::PathBuf;
-use std::str::FromStr;
+use std::{
+    ffi::OsStr,
+    io::{self, Write},
+    path::PathBuf,
+    str::FromStr,
+};
 
 use structopt::StructOpt;
 
-use documents::{Document, DocumentError, DocumentType};
-use merging::ArrayMergeBehavior;
+use crate::{
+    documents::{Document, DocumentError, DocumentType},
+    merging::ArrayMergeBehavior,
+};
 
 /// Command-line arguments for this tool
 #[derive(StructOpt, Debug)]

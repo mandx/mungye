@@ -2,9 +2,11 @@
 use json as jsonlib;
 use yaml_rust as yamllib;
 
-// pub(crate) struct TomlValue(toml::Value);
+#[derive(Debug, PartialEq)]
 pub(crate) struct YamlValue(pub yamllib::Yaml);
+#[derive(Debug, PartialEq)]
 pub(crate) struct JsonValue(pub jsonlib::JsonValue);
+// pub(crate) struct TomlValue(toml::Value);
 
 pub(crate) struct JsonObject(jsonlib::object::Object);
 pub(crate) struct YamlHash(yamllib::yaml::Hash);
@@ -131,5 +133,16 @@ impl From<YamlValue> for JsonValue {
             yamllib::Yaml::Alias(_) => panic!("`Yaml::Alias` is not yer supported"),
             yamllib::Yaml::BadValue => panic!("`Yaml::BadValue` can not be converted"),
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_defaults() {
+        assert_eq!(YamlValue::default(), YamlValue(yamllib::Yaml::Null));
+        assert_eq!(JsonValue::default(), JsonValue(jsonlib::JsonValue::Null));
     }
 }
