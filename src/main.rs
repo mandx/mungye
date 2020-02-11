@@ -10,6 +10,7 @@ use std::{
 };
 
 use structopt::StructOpt;
+use strum::VariantNames;
 
 use crate::{
     documents::{Document, DocumentError, DocumentType},
@@ -28,18 +29,18 @@ struct CliArgs {
     filenames: Vec<PathBuf>,
 
     /// How to handle arrays merging
-    #[structopt(long = "arrays", default_value)]
+    #[structopt(long = "arrays", default_value, possible_values = &ArrayMergeBehavior::VARIANTS)]
     array_merge: ArrayMergeBehavior,
 
     /// Force output to be in a specific format, otherwise the format of
     /// first file in the arguments is used.
-    #[structopt(long = "force-format")]
+    #[structopt(long = "force-format", possible_values = &DocumentType::VARIANTS)]
     force_format: Option<DocumentType>,
 
     /// Defines the format for stdin data. This is required if the dash
     /// (`-`, the stdin placeholder) is specified as a file argument.
     /// Otherwise it is ignored.
-    #[structopt(long = "stdin-format")]
+    #[structopt(long = "stdin-format", possible_values = &DocumentType::VARIANTS)]
     stdin_format: Option<DocumentType>,
 }
 

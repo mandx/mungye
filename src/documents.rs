@@ -3,6 +3,7 @@ use std::fs::read_to_string;
 use std::path::{Path, PathBuf};
 
 use itertools::{EitherOrBoth, Itertools};
+use strum_macros::{Display, EnumString, EnumVariantNames};
 
 use crate::conversions::{JsonValue, YamlValue};
 use crate::merging::{ArrayMergeBehavior, DeepMerge};
@@ -11,24 +12,12 @@ use json as jsonlib;
 // use toml as tomllib;
 use yaml_rust as yamllib;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Display, EnumString, EnumVariantNames)]
+#[strum(serialize_all = "kebab-case")]
 pub(crate) enum DocumentType {
     YAML,
     // TOML,
     JSON,
-}
-
-impl std::str::FromStr for DocumentType {
-    type Err = String;
-
-    fn from_str(s: &str) -> Result<Self, String> {
-        match s.to_ascii_lowercase().as_str() {
-            "yaml" | "yml" => Ok(Self::YAML),
-            "json" => Ok(Self::JSON),
-            // "toml" => Ok(Self::TOML),
-            s => Err(format!("`{}` is not recognized as document typd", s)),
-        }
-    }
 }
 
 impl DocumentType {

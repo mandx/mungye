@@ -1,7 +1,10 @@
 mod json;
 mod yaml;
 
-#[derive(Debug, Copy, Clone)]
+use strum_macros::{Display, EnumString, EnumVariantNames};
+
+#[derive(Debug, Copy, Clone, Display, EnumString, EnumVariantNames)]
+#[strum(serialize_all = "kebab-case")]
 pub(crate) enum ArrayMergeBehavior {
     Replace,
     Concat,
@@ -16,27 +19,6 @@ pub(crate) enum ArrayMergeBehavior {
 impl Default for ArrayMergeBehavior {
     fn default() -> Self {
         ArrayMergeBehavior::Replace
-    }
-}
-
-impl std::str::FromStr for ArrayMergeBehavior {
-    type Err = &'static str;
-
-    fn from_str(s: &str) -> Result<ArrayMergeBehavior, &'static str> {
-        match s {
-            "Replace" | "replace" => Ok(Self::Replace),
-            "Concat" | "concat" => Ok(Self::Concat),
-            _ => Err("Not `replace` | `concat`"),
-        }
-    }
-}
-
-impl std::fmt::Display for ArrayMergeBehavior {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Replace => write!(f, "replace"),
-            Self::Concat => write!(f, "concat"),
-        }
     }
 }
 
