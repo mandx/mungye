@@ -66,63 +66,87 @@ fn main() {
         stdin_format,
     } = CliArgs::from_args();
 
-    let mut stdin_found = false;
-
-    if filenames
+    let use_stdin = filenames
         .iter()
-        .any(|filename| filename.to_str().map(|s| s == "-").unwrap_or(false))
-        && stdin_format.is_none()
-    {
+        .any(|filename| filename.to_str().map(|s| s == "-").unwrap_or(false));
+
+    if use_stdin && stdin_format.is_none() {
         eprintln!("Error: `--stdin-format` must be set when `-` (stdin) is specified.");
+        // TODO: Get rid of `exit()` since this doesn't allow destructors to
+        // run properly. Change `main` to return a `Result<>`, also look into
+        // https://github.com/sgrif/terminator
         std::process::exit(1);
     }
 
-    let mut documents = filenames
-        .into_iter()
-        .filter_map(|filename| {
-            let is_stdin = filename.to_str().map(|s| s == "-").unwrap_or(false);
-
-            if is_stdin {
-                if stdin_found {
-                    return None;
-                }
-                stdin_found = true;
-
-                stdin_format.map(|doc_type| {
-                    let mut buffer = String::new();
-                    stdin()
-                        .lock()
-                        .read_to_string(&mut buffer)
-                        .map_err(|error| DocumentError::Loading {
-                            filename: filename.clone(),
-                            error: Box::new(error),
-                        })
-                        .and_then(|_| doc_type.load_from_str(&buffer, &filename))
+    let stdin_doc_result = match (use_stdin, stdin_format) {
+        (true, Some(doc_type)) => {
+            let mut buffer = String::new();
+            stdin()
+                .lock()
+                .read_to_string(&mut buffer)
+                .map_err(|error| DocumentError::Loading {
+                    filename: "-".into(),
+                    error: Box::new(error),
                 })
-            } else {
-                filename
-                    .extension()
-                    .and_then(OsStr::to_str)
-                    .map(|extension| {
-                        DocumentType::from_str(extension)
-                            .map_err(|_| DocumentError::Skipped {
-                                filename: filename.clone(),
-                            })
-                            .and_then(|doc_type| doc_type.load_from_path(&filename))
-                    })
+                .and_then(|_| doc_type.load_from_str(&buffer, PathBuf::from("-")))
+        }
+        (true, None) => {
+            eprintln!("Error: `--stdin-format` must be set when `-` (stdin) is specified.");
+            // TODO: Get rid of `exit()` since this doesn't allow destructors to
+            // run properly. Change `main` to return a `Result<>`, also look into
+            // https://github.com/sgrif/terminator
+            std::process::exit(1);
+        }
+        (false, _) => Err(DocumentError::Skipped {
+            filename: "-".into(),
+        }),
+    };
+
+    let mut documents = filenames.into_iter().filter_map(|filename| {
+        // Check if is this is stdin's placeholder
+        if filename.to_str().map(|s| s == "-").unwrap_or(false) {
+            // stdin's result is a singleton, but unfortunately most errors are
+            // not `Clone`, so we can't clone the entire result, which means
+            // we need to handle stdin's processing right here.
+            match stdin_doc_result.as_ref() {
+                Ok(stdin_doc) => Some(stdin_doc.clone()),
+                Err(DocumentError::Skipped { filename }) => {
+                    eprintln!("Skipped {:?}", filename);
+                    None
+                }
+                Err(DocumentError::Loading { filename, error }) => {
+                    eprintln!("Error loading {:?}: {:?}", filename, error);
+                    None
+                }
             }
-        })
-        .filter_map(|loaded| match loaded {
-            Err(DocumentError::Skipped { filename }) => {
-                eprintln!("Skipped {:?}", filename);
-                None
+        } else {
+            // Treat `filename` as a regular file
+            match filename
+                .extension()
+                .and_then(OsStr::to_str)
+                .map(|extension| {
+                    DocumentType::from_str(extension)
+                        .map_err(|_| DocumentError::Skipped {
+                            filename: filename.clone(),
+                        })
+                        .and_then(|doc_type| doc_type.load_from_path(&filename))
+                }) {
+                Some(Err(DocumentError::Skipped { filename })) => {
+                    eprintln!("Skipped {:?}", filename);
+                    None
+                }
+                Some(Err(DocumentError::Loading { filename, error })) => {
+                    eprintln!("Error loading {:?}: {:?}", filename, error);
+                    None
+                }
+                Some(Ok(document)) => Some(document),
+                None => {
+                    eprintln!("Skipped {:?}", filename);
+                    None
+                }
             }
-            Err(DocumentError::Loading { filename, error }) => {
-                eprintln!("Error loading {:?}: {:?}", filename, error);
-                None
-            }
-            Ok(document) => Some(document),
-        });
+        }
+    });
 
     let destination = force_format
         .as_ref()

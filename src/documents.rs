@@ -77,7 +77,7 @@ impl DocumentType {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) enum Document {
     YAML(Vec<yamllib::Yaml>),
     // TOML(Vec<tomllib::Value>),
