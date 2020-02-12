@@ -18,7 +18,7 @@ jobs:
             asset_name: mungye-linux-amd64
           - os: windows-latest
             artifact_name: mungye.exe
-            asset_name: mungye-windows-amd64
+            asset_name: mungye-windows-amd64.exe
           - os: macos-latest
             artifact_name: mungye
             asset_name: mungye-macos-amd64
@@ -35,10 +35,18 @@ jobs:
         with:
           command: build
           args: --release
+      - run: cd target/release/ && tar -czf ${{ matrix.artifact_name }}.tar.gz ${{ matrix.artifact_name }}
       - uses: svenstaro/upload-release-action@1.0.1
         name: Upload files to a GitHub release
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: target/release/${{ matrix.artifact_name }}
           asset_name: ${{ matrix.asset_name }}
+          tag: ${{ github.ref }}
+      - uses: svenstaro/upload-release-action@1.0.1
+        name: Upload compressed files to a GitHub release
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: target/release/${{ matrix.artifact_name }}.tar.gz
+          asset_name: ${{ matrix.asset_name }}.tar.gz
           tag: ${{ github.ref }}
