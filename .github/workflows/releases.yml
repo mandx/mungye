@@ -1,0 +1,43 @@
+on:
+  push:
+    tags:
+      - '*'
+
+name: Binary releases
+
+jobs:
+  bin_releases:
+    name: Release builds
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact_name: mungye
+            asset_name: mungye-linux-amd64
+          - os: windows-latest
+            artifact_name: mungye.exe
+            asset_name: mungye-windows-amd64
+          - os: macos-latest
+            artifact_name: mungye
+            asset_name: mungye-macos-amd64
+    steps:
+      - uses: actions/checkout@master
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release
+      - uses: svenstaro/upload-release-action@1.0.1
+        name: Upload files to a GitHub release
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: target/release/${{ matrix.artifact_name }}
+          asset_name: ${{ matrix.asset_name }}
+          tag: ${{ github.ref }}
