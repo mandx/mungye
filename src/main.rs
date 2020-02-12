@@ -150,7 +150,7 @@ fn main() {
 
     let destination = force_format
         .as_ref()
-        .map(DocumentType::default_document)
+        .map(|doc_type| doc_type.default_document())
         .unwrap_or_else(|| match documents.next() {
             Some(loaded) => loaded,
             None => {

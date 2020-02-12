@@ -21,14 +21,14 @@ pub(crate) enum DocumentType {
 }
 
 impl DocumentType {
-    pub fn default_document(&self) -> Document {
+    pub fn default_document(self) -> Document {
         match self {
             Self::YAML => Document::YAML(vec![YamlValue::default().0]),
             Self::JSON => Document::JSON(vec![JsonValue::default().0]),
         }
     }
 
-    pub fn load_from_path<P: AsRef<Path>>(&self, filename: P) -> Result<Document, DocumentError> {
+    pub fn load_from_path<P: AsRef<Path>>(self, filename: P) -> Result<Document, DocumentError> {
         let content = match read_to_string(filename.as_ref()) {
             Ok(contents) => contents,
             Err(error) => {
@@ -56,7 +56,7 @@ impl DocumentType {
     }
 
     pub fn load_from_str<S: AsRef<str>, P: AsRef<Path>>(
-        &self,
+        self,
         content: S,
         filename: P,
     ) -> Result<Document, DocumentError> {
