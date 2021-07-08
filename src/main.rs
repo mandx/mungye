@@ -13,7 +13,7 @@ use structopt::StructOpt;
 use strum::VariantNames;
 
 use crate::{
-    documents::{Document, DocumentError, DocumentType},
+    documents::{Document, DocumentError, DocumentType, NamespaceWith},
     merging::ArrayMergeBehavior,
 };
 
@@ -42,6 +42,9 @@ struct CliArgs {
     /// Otherwise it is ignored.
     #[structopt(long = "stdin-format", possible_values = &DocumentType::VARIANTS)]
     stdin_format: Option<DocumentType>,
+
+    #[structopt(long = "namespace")]
+    namespace: Option<NamespaceWith>,
 }
 
 fn handle_stdout_error<T>(result: io::Result<T>) {
@@ -64,6 +67,7 @@ fn main() {
         array_merge,
         force_format,
         stdin_format,
+        namespace: wrap,
     } = CliArgs::from_args();
 
     let use_stdin = filenames
@@ -130,6 +134,10 @@ fn main() {
                             filename: filename.clone(),
                         })
                         .and_then(|doc_type| doc_type.load_from_path(&filename))
+                        .map(|doc| match wrap {
+                            Some(using) => using.wrap(doc, &filename),
+                            None => doc,
+                        })
                 }) {
                 Some(Err(DocumentError::Skipped { filename })) => {
                     eprintln!("Skipped {:?}", filename);

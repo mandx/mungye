@@ -12,6 +12,81 @@ use json as jsonlib;
 // use toml as tomllib;
 use yaml_rust as yamllib;
 
+#[derive(Debug, Clone, Copy)]
+pub(crate) enum NamespaceWith {
+    Path,
+    Filename,
+    Basename,
+}
+
+impl std::str::FromStr for NamespaceWith {
+    type Err = &'static str;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "path" => Ok(NamespaceWith::Path),
+            "filename" => Ok(NamespaceWith::Filename),
+            "basename" => Ok(NamespaceWith::Basename),
+            _ => Err("Invalid wrap with option"),
+        }
+    }
+}
+
+impl NamespaceWith {
+    pub(crate) fn wrap<P: AsRef<Path>>(&self, document: Document, path: P) -> Document {
+        let namespace: String = match self {
+            NamespaceWith::Path => path.as_ref().to_string_lossy().into(),
+            NamespaceWith::Filename => {
+                let path_ref = path.as_ref();
+                path_ref
+                    .file_name()
+                    .unwrap_or_else(|| path_ref.as_os_str())
+                    .to_string_lossy()
+                    .into()
+            }
+            NamespaceWith::Basename => {
+                let mut path = path.as_ref().to_owned();
+                if path.set_extension("") {
+                    path.file_name()
+                        .unwrap_or_else(|| path.as_os_str())
+                        .to_string_lossy()
+                        .into()
+                } else {
+                    path.as_os_str().to_string_lossy().into()
+                }
+            }
+        };
+
+        match document {
+            Document::YAML(yaml_doc) => {
+                let mut namespace_hash = yamllib::yaml::Hash::new();
+                namespace_hash.insert(
+                    yamllib::Yaml::String(namespace.into()),
+                    match &yaml_doc[..] {
+                        [] => yamllib::Yaml::Null,
+                        [v] => v.clone(),
+                        _ => yamllib::Yaml::Array(yaml_doc),
+                    },
+                );
+                Document::YAML(vec![yamllib::Yaml::Hash(namespace_hash)])
+            }
+            Document::JSON(json_value) => {
+                // todo!()
+                let mut namespace_obj = jsonlib::object::Object::new();
+                namespace_obj.insert(
+                    &namespace,
+                    match &json_value[..] {
+                        [] => jsonlib::JsonValue::Null,
+                        [v] => v.clone(),
+                        _ => jsonlib::JsonValue::Array(json_value),
+                    },
+                );
+                Document::JSON(vec![jsonlib::JsonValue::Object(namespace_obj)])
+            }
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, Display, EnumString, EnumVariantNames)]
 #[strum(serialize_all = "kebab-case")]
 pub(crate) enum DocumentType {
