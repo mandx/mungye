@@ -61,7 +61,7 @@ impl NamespaceWith {
             Document::Yaml(yaml_doc) => {
                 let mut namespace_hash = yamllib::yaml::Hash::new();
                 namespace_hash.insert(
-                    yamllib::Yaml::String(namespace.into()),
+                    yamllib::Yaml::String(namespace),
                     match &yaml_doc[..] {
                         [] => yamllib::Yaml::Null,
                         [v] => v.clone(),
