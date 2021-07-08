@@ -11,9 +11,9 @@ yaml-rust = "^0.4.5"
 toml = "^0.5"
 json = "^0.12"
 structopt = "^0.3"
-itertools = "^0.8"
-strum = "^0.17"
-strum_macros = "^0.17"
+itertools = "^0.10"
+strum = "^0.21"
+strum_macros = "^0.21"
 
 [dev-dependencies]
 test-case = "^1"

@@ -56,7 +56,9 @@ impl From<JsonValue> for YamlValue {
         YamlValue(match value {
             jsonlib::JsonValue::Null => yamllib::Yaml::Null,
             jsonlib::JsonValue::Short(value) => yamllib::Yaml::String(value.into()),
-            jsonlib::JsonValue::Number(value) => yamllib::Yaml::Integer(value.into()),
+
+            // TODO: Maybe figure out a way of not having to format a JSON number to string?
+            jsonlib::JsonValue::Number(value) => yamllib::Yaml::Real(value.to_string()),
             jsonlib::JsonValue::String(value) => yamllib::Yaml::String(value),
             jsonlib::JsonValue::Boolean(value) => yamllib::Yaml::Boolean(value),
             jsonlib::JsonValue::Object(value) => {

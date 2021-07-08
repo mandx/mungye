@@ -33,6 +33,7 @@ impl std::str::FromStr for NamespaceWith {
 }
 
 impl NamespaceWith {
+    #![allow(clippy::trivially_copy_pass_by_ref)]
     pub(crate) fn wrap<P: AsRef<Path>>(&self, document: Document, path: P) -> Document {
         let namespace: String = match self {
             NamespaceWith::Path => path.as_ref().to_string_lossy().into(),
