@@ -174,10 +174,10 @@ fn main() {
     let stdout = io::stdout();
 
     match result {
-        Document::JSON(json) => json.into_iter().map(|doc| doc.pretty(2)).for_each(|out| {
+        Document::Json(json) => json.into_iter().map(|doc| doc.pretty(2)).for_each(|out| {
             handle_stdout_error(writeln!(stdout.lock(), "{}", &out));
         }),
-        Document::YAML(yaml) => yaml
+        Document::Yaml(yaml) => yaml
             .into_iter()
             .map(|doc| {
                 use yaml_rust as yamllib;

@@ -58,7 +58,7 @@ impl NamespaceWith {
         };
 
         match document {
-            Document::YAML(yaml_doc) => {
+            Document::Yaml(yaml_doc) => {
                 let mut namespace_hash = yamllib::yaml::Hash::new();
                 namespace_hash.insert(
                     yamllib::Yaml::String(namespace.into()),
@@ -68,9 +68,9 @@ impl NamespaceWith {
                         _ => yamllib::Yaml::Array(yaml_doc),
                     },
                 );
-                Document::YAML(vec![yamllib::Yaml::Hash(namespace_hash)])
+                Document::Yaml(vec![yamllib::Yaml::Hash(namespace_hash)])
             }
-            Document::JSON(json_value) => {
+            Document::Json(json_value) => {
                 // todo!()
                 let mut namespace_obj = jsonlib::object::Object::new();
                 namespace_obj.insert(
@@ -81,7 +81,7 @@ impl NamespaceWith {
                         _ => jsonlib::JsonValue::Array(json_value),
                     },
                 );
-                Document::JSON(vec![jsonlib::JsonValue::Object(namespace_obj)])
+                Document::Json(vec![jsonlib::JsonValue::Object(namespace_obj)])
             }
         }
     }
@@ -98,8 +98,8 @@ pub(crate) enum DocumentType {
 impl DocumentType {
     pub fn default_document(self) -> Document {
         match self {
-            Self::Yaml => Document::YAML(vec![YamlValue::default().0]),
-            Self::Json => Document::JSON(vec![JsonValue::default().0]),
+            Self::Yaml => Document::Yaml(vec![YamlValue::default().0]),
+            Self::Json => Document::Json(vec![JsonValue::default().0]),
         }
     }
 
@@ -116,13 +116,13 @@ impl DocumentType {
 
         match self {
             Self::Yaml => yamllib::YamlLoader::load_from_str(content.as_ref())
-                .map(Document::YAML)
+                .map(Document::Yaml)
                 .map_err(|error| DocumentError::Loading {
                     filename: filename.as_ref().into(),
                     error: Box::new(error),
                 }),
             Self::Json => jsonlib::parse(content.as_ref())
-                .map(|loaded| Document::JSON(vec![loaded]))
+                .map(|loaded| Document::Json(vec![loaded]))
                 .map_err(|error| DocumentError::Loading {
                     filename: filename.as_ref().into(),
                     error: Box::new(error),
@@ -137,13 +137,13 @@ impl DocumentType {
     ) -> Result<Document, DocumentError> {
         match self {
             Self::Yaml => yamllib::YamlLoader::load_from_str(content.as_ref())
-                .map(Document::YAML)
+                .map(Document::Yaml)
                 .map_err(|error| DocumentError::Loading {
                     filename: filename.as_ref().into(),
                     error: Box::new(error),
                 }),
             Self::Json => jsonlib::parse(content.as_ref())
-                .map(|loaded| Document::JSON(vec![loaded]))
+                .map(|loaded| Document::Json(vec![loaded]))
                 .map_err(|error| DocumentError::Loading {
                     filename: filename.as_ref().into(),
                     error: Box::new(error),
@@ -154,9 +154,9 @@ impl DocumentType {
 
 #[derive(Debug, Clone)]
 pub(crate) enum Document {
-    YAML(Vec<yamllib::Yaml>),
+    Yaml(Vec<yamllib::Yaml>),
     // TOML(Vec<tomllib::Value>),
-    JSON(Vec<jsonlib::JsonValue>),
+    Json(Vec<jsonlib::JsonValue>),
 }
 
 #[derive(Debug)]
@@ -173,7 +173,7 @@ pub(crate) enum DocumentError {
 impl Document {
     pub fn deep_merge(self, with: Self, array_merge: ArrayMergeBehavior) -> Self {
         match (self, with) {
-            (Self::YAML(left), Self::YAML(right)) => Self::YAML(
+            (Self::Yaml(left), Self::Yaml(right)) => Self::Yaml(
                 left.into_iter()
                     .zip_longest(right.into_iter())
                     .map(|zipped| match zipped {
@@ -185,7 +185,7 @@ impl Document {
                     })
                     .collect(),
             ),
-            (Self::JSON(left), Self::JSON(right)) => Self::JSON(
+            (Self::Json(left), Self::Json(right)) => Self::Json(
                 left.into_iter()
                     .zip_longest(right.into_iter())
                     .map(|zipped| match zipped {
@@ -197,7 +197,7 @@ impl Document {
                     })
                     .collect(),
             ),
-            (Self::JSON(left), Self::YAML(right)) => Self::JSON(
+            (Self::Json(left), Self::Yaml(right)) => Self::Json(
                 left.into_iter()
                     .zip_longest(
                         right
@@ -213,7 +213,7 @@ impl Document {
                     })
                     .collect(),
             ),
-            (Self::YAML(left), Self::JSON(right)) => Self::YAML(
+            (Self::Yaml(left), Self::Json(right)) => Self::Yaml(
                 left.into_iter()
                     .zip_longest(
                         right
