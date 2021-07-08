@@ -90,16 +90,16 @@ impl NamespaceWith {
 #[derive(Debug, Clone, Copy, Display, EnumString, EnumVariantNames)]
 #[strum(serialize_all = "kebab-case")]
 pub(crate) enum DocumentType {
-    YAML,
+    Yaml,
     // TOML,
-    JSON,
+    Json,
 }
 
 impl DocumentType {
     pub fn default_document(self) -> Document {
         match self {
-            Self::YAML => Document::YAML(vec![YamlValue::default().0]),
-            Self::JSON => Document::JSON(vec![JsonValue::default().0]),
+            Self::Yaml => Document::YAML(vec![YamlValue::default().0]),
+            Self::Json => Document::JSON(vec![JsonValue::default().0]),
         }
     }
 
@@ -115,13 +115,13 @@ impl DocumentType {
         };
 
         match self {
-            Self::YAML => yamllib::YamlLoader::load_from_str(content.as_ref())
+            Self::Yaml => yamllib::YamlLoader::load_from_str(content.as_ref())
                 .map(Document::YAML)
                 .map_err(|error| DocumentError::Loading {
                     filename: filename.as_ref().into(),
                     error: Box::new(error),
                 }),
-            Self::JSON => jsonlib::parse(content.as_ref())
+            Self::Json => jsonlib::parse(content.as_ref())
                 .map(|loaded| Document::JSON(vec![loaded]))
                 .map_err(|error| DocumentError::Loading {
                     filename: filename.as_ref().into(),
@@ -136,13 +136,13 @@ impl DocumentType {
         filename: P,
     ) -> Result<Document, DocumentError> {
         match self {
-            Self::YAML => yamllib::YamlLoader::load_from_str(content.as_ref())
+            Self::Yaml => yamllib::YamlLoader::load_from_str(content.as_ref())
                 .map(Document::YAML)
                 .map_err(|error| DocumentError::Loading {
                     filename: filename.as_ref().into(),
                     error: Box::new(error),
                 }),
-            Self::JSON => jsonlib::parse(content.as_ref())
+            Self::Json => jsonlib::parse(content.as_ref())
                 .map(|loaded| Document::JSON(vec![loaded]))
                 .map_err(|error| DocumentError::Loading {
                     filename: filename.as_ref().into(),
